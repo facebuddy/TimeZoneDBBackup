@@ -29,20 +29,37 @@ namespace TimeZoneDBBackup
             var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
             var fileName = string.Format(CultureInfo.InvariantCulture, "{0}{1}.bak", databaseName, timestamp);
             var path = Path.Combine(_backupDirectory, fileName);
+            var logFile = Path.Combine(_backupDirectory, "backup.log");
 
             var sql = "BACKUP DATABASE [{0}] TO DISK = @path WITH COPY_ONLY, INIT, FORMAT, COMPRESSION";
             var commandText = string.Format(CultureInfo.InvariantCulture, sql, databaseName);
 
-            using (var connection = new SqlConnection(_connectionString))
-            using (var command = new SqlCommand(commandText, connection))
+            try
             {
-                command.Parameters.AddWithValue("@path", path);
+                using (var connection = new SqlConnection(_connectionString))
+                using (var command = new SqlCommand(commandText, connection))
+                {
+                    command.Parameters.AddWithValue("@path", path);
 
-                connection.Open();
-                command.ExecuteNonQuery();
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+
+                var successMessage = string.Format(CultureInfo.InvariantCulture, "[{0}] Backed up '{1}' to {2}", timestamp, databaseName, path);
+                WriteLog(logFile, successMessage);
+                Console.WriteLine(successMessage);
             }
+            catch (Exception ex)
+            {
+                var failureMessage = string.Format(CultureInfo.InvariantCulture, "[{0}] Failed to back up '{1}': {2}", timestamp, databaseName, ex.Message);
+                WriteLog(logFile, failureMessage);
+                throw;
+            }
+        }
 
-            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Backed up '{0}' to {1}", databaseName, path));
+        private static void WriteLog(string logFilePath, string message)
+        {
+            File.AppendAllText(logFilePath, message + Environment.NewLine);
         }
 
         private static string BuildMasterConnectionString()

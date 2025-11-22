@@ -14,11 +14,16 @@ namespace TimeZoneDBBackup
                 backupDirectory = @"D:\\AutoBackup";
             }
 
-            var databases = new[]
-            {
-                "TZKLLDB",
-                "KCLHRM"
-            };
+                    var databases = new[]
+           {
+               "TZKLLDB",
+               "KCLHRM",
+               "KGCHRMCURRENTNEW",
+               "KGCHRMLKL",
+               "KGCHRMSR",
+               "KGCHRMTHAI",
+               "KCLHRM",
+           };
 
             Console.WriteLine("Starting database backup...");
             var service = new BackupService(backupDirectory);

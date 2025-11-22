@@ -11,7 +11,7 @@ namespace TimeZoneDBBackup
             var backupDirectory = ConfigurationManager.AppSettings["BackupDirectory"];
             if (string.IsNullOrWhiteSpace(backupDirectory))
             {
-                backupDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
+                backupDirectory = @"D:\\AutoBackup";
             }
 
             var databases = new[]

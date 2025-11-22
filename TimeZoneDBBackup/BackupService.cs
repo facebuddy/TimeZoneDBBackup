@@ -26,8 +26,8 @@ namespace TimeZoneDBBackup
 
             Directory.CreateDirectory(_backupDirectory);
 
-            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
-            var fileName = string.Format(CultureInfo.InvariantCulture, "{0}_{1}.bak", databaseName, timestamp);
+            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+            var fileName = string.Format(CultureInfo.InvariantCulture, "{0}{1}.bak", databaseName, timestamp);
             var path = Path.Combine(_backupDirectory, fileName);
 
             var sql = "BACKUP DATABASE [{0}] TO DISK = @path WITH COPY_ONLY, INIT, FORMAT, COMPRESSION";

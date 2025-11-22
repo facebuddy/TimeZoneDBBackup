@@ -31,7 +31,8 @@ namespace TimeZoneDBBackup
             var path = Path.Combine(_backupDirectory, fileName);
             var logFile = Path.Combine(_backupDirectory, "backup.log");
 
-            var sql = "BACKUP DATABASE [{0}] TO DISK = @path WITH COPY_ONLY, INIT, FORMAT, COMPRESSION";
+            // SQL Server Express does not support BACKUP ... WITH COMPRESSION, so omit it to keep backups compatible
+            var sql = "BACKUP DATABASE [{0}] TO DISK = @path WITH COPY_ONLY, INIT, FORMAT";
             var commandText = string.Format(CultureInfo.InvariantCulture, sql, databaseName);
 
             try

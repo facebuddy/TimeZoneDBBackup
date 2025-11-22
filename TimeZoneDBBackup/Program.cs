@@ -25,17 +25,18 @@ namespace TimeZoneDBBackup
 
             foreach (var database in databases)
             {
-                try
+                var success = service.BackupDatabase(database);
+
+                if (!success)
                 {
-                    service.BackupDatabase(database);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Failed to back up database '{database}': {ex.Message}");
+                    Console.Error.WriteLine($"Backup failed for '{database}'. See log for details.");
                 }
             }
 
             Console.WriteLine("Backup process completed.");
+
+            Console.WriteLine("Press any key to close the application...");
+            Console.ReadKey();
         }
     }
 }

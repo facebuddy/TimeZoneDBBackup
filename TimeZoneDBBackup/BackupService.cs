@@ -10,11 +10,15 @@ namespace TimeZoneDBBackup
     {
         private readonly string _backupDirectory;
         private readonly string _connectionString;
+        private readonly int _commandTimeoutSeconds;
+
+        private const int DefaultCommandTimeoutSeconds = 3600; // 1 hour for large databases
 
         public BackupService(string backupDirectory)
         {
             _backupDirectory = backupDirectory;
             _connectionString = BuildMasterConnectionString();
+            _commandTimeoutSeconds = GetCommandTimeoutSeconds();
         }
 
         public bool BackupDatabase(string databaseName)
@@ -43,6 +47,7 @@ namespace TimeZoneDBBackup
                 using (var command = new SqlCommand(commandText, connection))
                 {
                     command.Parameters.AddWithValue("@path", path);
+                    command.CommandTimeout = _commandTimeoutSeconds;
 
                     connection.Open();
                     Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "[{0}] Connection to '{1}' established successfully.", timestamp, databaseName));
@@ -85,6 +90,18 @@ namespace TimeZoneDBBackup
             };
 
             return builder.ToString();
+        }
+
+        private static int GetCommandTimeoutSeconds()
+        {
+            var timeoutSetting = ConfigurationManager.AppSettings["BackupCommandTimeoutSeconds"];
+
+            if (int.TryParse(timeoutSetting, NumberStyles.Integer, CultureInfo.InvariantCulture, out var timeoutSeconds) && timeoutSeconds >= 0)
+            {
+                return timeoutSeconds;
+            }
+
+            return DefaultCommandTimeoutSeconds;
         }
     }
 }

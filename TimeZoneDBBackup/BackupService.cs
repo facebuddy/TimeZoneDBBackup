@@ -17,7 +17,7 @@ namespace TimeZoneDBBackup
             _connectionString = BuildMasterConnectionString();
         }
 
-        public void BackupDatabase(string databaseName)
+        public bool BackupDatabase(string databaseName)
         {
             if (string.IsNullOrWhiteSpace(databaseName))
             {
@@ -35,6 +35,8 @@ namespace TimeZoneDBBackup
             var sql = "BACKUP DATABASE [{0}] TO DISK = @path WITH COPY_ONLY, INIT, FORMAT";
             var commandText = string.Format(CultureInfo.InvariantCulture, sql, databaseName);
 
+            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "[{0}] Starting backup for '{1}'...", timestamp, databaseName));
+
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -43,18 +45,24 @@ namespace TimeZoneDBBackup
                     command.Parameters.AddWithValue("@path", path);
 
                     connection.Open();
+                    Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "[{0}] Connection to '{1}' established successfully.", timestamp, databaseName));
                     command.ExecuteNonQuery();
                 }
 
                 var successMessage = string.Format(CultureInfo.InvariantCulture, "[{0}] Backed up '{1}' to {2}", timestamp, databaseName, path);
                 WriteLog(logFile, successMessage);
                 Console.WriteLine(successMessage);
+
+                return true;
             }
             catch (Exception ex)
             {
                 var failureMessage = string.Format(CultureInfo.InvariantCulture, "[{0}] Failed to back up '{1}': {2}", timestamp, databaseName, ex.Message);
                 WriteLog(logFile, failureMessage);
-                throw;
+
+                Console.Error.WriteLine(failureMessage);
+
+                return false;
             }
         }
 

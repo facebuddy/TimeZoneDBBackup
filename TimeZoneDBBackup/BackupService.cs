@@ -3,6 +3,7 @@ using System.Configuration;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 
 namespace TimeZoneDBBackup
 {
@@ -11,14 +12,17 @@ namespace TimeZoneDBBackup
         private readonly string _backupDirectory;
         private readonly string _connectionString;
         private readonly int _commandTimeoutSeconds;
+        private readonly string _zipDestinationDirectory;
 
         private const int DefaultCommandTimeoutSeconds = 3600; // 1 hour for large databases
+        private const string DefaultZipDestinationDirectory = @"D:\\dbBackup";
 
         public BackupService(string backupDirectory)
         {
             _backupDirectory = backupDirectory;
             _connectionString = BuildMasterConnectionString();
             _commandTimeoutSeconds = GetCommandTimeoutSeconds();
+            _zipDestinationDirectory = GetZipDestinationDirectory();
         }
 
         public bool BackupDatabase(string databaseName)
@@ -58,6 +62,21 @@ namespace TimeZoneDBBackup
                 WriteLog(logFile, successMessage);
                 Console.WriteLine(successMessage);
 
+                try
+                {
+                    var zipPath = CreateZipArchive(path, databaseName, timestamp);
+                    var zipSuccessMessage = string.Format(CultureInfo.InvariantCulture, "[{0}] Compressed '{1}' backup to {2}", timestamp, databaseName, zipPath);
+                    WriteLog(logFile, zipSuccessMessage);
+                    Console.WriteLine(zipSuccessMessage);
+                }
+                catch (Exception zipEx)
+                {
+                    var zipFailureMessage = string.Format(CultureInfo.InvariantCulture, "[{0}] Failed to compress backup for '{1}': {2}", timestamp, databaseName, zipEx.Message);
+                    WriteLog(logFile, zipFailureMessage);
+                    Console.Error.WriteLine(zipFailureMessage);
+                    return false;
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -74,6 +93,35 @@ namespace TimeZoneDBBackup
         private static void WriteLog(string logFilePath, string message)
         {
             File.AppendAllText(logFilePath, message + Environment.NewLine);
+        }
+
+        private string CreateZipArchive(string backupFilePath, string databaseName, string timestamp)
+        {
+            Directory.CreateDirectory(_zipDestinationDirectory);
+
+            var zipFileName = string.Format(CultureInfo.InvariantCulture, "{0}{1}.zip", databaseName, timestamp);
+            var temporaryZipPath = Path.Combine(_backupDirectory, zipFileName);
+            var destinationZipPath = Path.Combine(_zipDestinationDirectory, zipFileName);
+
+            if (File.Exists(temporaryZipPath))
+            {
+                File.Delete(temporaryZipPath);
+            }
+
+            if (File.Exists(destinationZipPath))
+            {
+                File.Delete(destinationZipPath);
+            }
+
+            using (var archive = ZipFile.Open(temporaryZipPath, ZipArchiveMode.Create))
+            {
+                var entryName = Path.GetFileName(backupFilePath);
+                archive.CreateEntryFromFile(backupFilePath, entryName, CompressionLevel.Optimal);
+            }
+
+            File.Move(temporaryZipPath, destinationZipPath);
+
+            return destinationZipPath;
         }
 
         private static string BuildMasterConnectionString()
@@ -102,6 +150,18 @@ namespace TimeZoneDBBackup
             }
 
             return DefaultCommandTimeoutSeconds;
+        }
+
+        private static string GetZipDestinationDirectory()
+        {
+            var configuredZipDirectory = ConfigurationManager.AppSettings["ZipBackupDirectory"];
+
+            if (!string.IsNullOrWhiteSpace(configuredZipDirectory))
+            {
+                return configuredZipDirectory;
+            }
+
+            return DefaultZipDestinationDirectory;
         }
     }
 }
